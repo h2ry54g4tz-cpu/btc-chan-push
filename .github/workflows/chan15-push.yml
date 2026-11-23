@@ -3,6 +3,8 @@ name: BTC 15m 缠论买卖点推送
 on:
   schedule:
     - cron: "*/5 * * * *"
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
