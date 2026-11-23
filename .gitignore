@@ -1,0 +1,8 @@
+# 含密钥，绝不入库（模板见 config.example.json）
+config.json
+
+state.json
+push.log
+data/
+__pycache__/
+*.pyc

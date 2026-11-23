@@ -1,0 +1,44 @@
+name: BTC 15m 缠论买卖点推送
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: chan15-push
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 恢复推送记录（避免重复通知）
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: "chan-state-${{ github.run_id }}"
+          restore-keys: |
+            chan-state-
+
+      - name: 拉行情并检查买卖点
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+        run: python chan15_push.py
+
+      - name: 显示运行日志
+        if: always()
+        run: |
+          echo "--- state.json ---"
+          cat state.json 2>/dev/null || echo "(尚无记录)"
+          echo "--- push.log (末 30 行) ---"
+          tail -n 30 push.log 2>/dev/null || echo "(无日志)"

@@ -1,0 +1,11 @@
+{
+  "bark_key": "",
+  "bark_server": "https://api.day.app",
+  "bark_group": "BTC缠论15m",
+  "symbol": "BTC",
+  "hyperliquid_coin": "BTC",
+  "days": 12,
+  "lookback_hours": 8,
+  "chanlun_dir": "",
+  "push_kinds": ["bottom", "top", "ratio"]
+}
