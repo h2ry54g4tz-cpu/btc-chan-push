@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      test:
+        description: "只发一条测试通知，不跑分析"
+        type: boolean
+        default: false
 
 concurrency:
   group: chan15-push
@@ -35,7 +40,13 @@ jobs:
       - name: 拉行情并检查买卖点
         env:
           BARK_KEY: ${{ secrets.BARK_KEY }}
-        run: python chan15_push.py
+        run: |
+          if [ "${{ inputs.test }}" = "true" ]; then
+            echo "== 测试模式：只验证推送通道 =="
+            python chan15_push.py --test
+          else
+            python chan15_push.py
+          fi
 
       - name: 显示运行日志
         if: always()

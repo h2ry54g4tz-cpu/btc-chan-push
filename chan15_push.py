@@ -364,12 +364,18 @@ def main():
         state["pushed"] = sorted(pushed | {s for s, _ in fresh})
         save_state(state)
         log("首次运行：已建立基线（%d 个历史信号不推送）" % len(items))
-        if not args.dry_run and (cfg.get("bark_key") or "").strip():
-            try:
-                bark_send(cfg, "BTC 缠论监控已启动",
-                          "15m 买卖点监控开始运行。\n当前无新信号，有信号会立刻通知你。")
-            except Exception as exc:
-                log("启动通知失败：%s" % exc)
+        if args.dry_run:
+            return 0
+        if not (cfg.get("bark_key") or "").strip():
+            log("未配置 bark_key，无法推送 —— 请检查 BARK_KEY 或 config.json")
+            return 1
+        try:
+            bark_send(cfg, "BTC 缠论监控已启动",
+                      "15m 买卖点监控开始运行。\n当前无新信号，有信号会立刻通知你。")
+            log("启动通知已发送，请检查手机")
+        except Exception as exc:
+            log("启动通知发送失败：%s" % exc)
+            return 1
         return 0
 
     if not fresh:
