@@ -62,6 +62,43 @@ python chan15_push.py
 
 之后每 5 分钟自动跑一次，你什么都不用管。
 
+### 当前部署
+
+| 项目 | 值 |
+|---|---|
+| 仓库 | https://github.com/h2ry54g4tz-cpu/btc-chan-push（public） |
+| 默认分支 | `main` |
+| Secret 名称 | `BARK_KEY` |
+| 触发方式 | `schedule`（每 5 分钟）+ `push`（推代码即验一次）+ `workflow_dispatch`（手动，可勾「只发测试通知」） |
+
+### 🚨 网络问题：HTTPS 推不上去就用 SSH
+
+首次部署时遇到 `fatal: unable to access ... Recv failure: Connection was reset`，原因是**本机网络对 github.com 的 HTTPS(443) 有干扰**，而 SSH 通道完全正常。
+
+诊断方法（能返回 `Permission denied (publickey)` 就说明网络是通的，只是没配密钥）：
+
+```bash
+ssh -T git@github.com          # 端口 22
+ssh -T -p 443 git@ssh.github.com   # 22 被封时的备用通道
+```
+
+解决：改用 SSH 远程地址
+
+```bash
+ssh-keygen -t ed25519 -C "你的邮箱" -f ~/.ssh/id_ed25519 -N ""
+# 把 ~/.ssh/id_ed25519.pub 的内容加到 https://github.com/settings/ssh/new
+git remote set-url origin git@github.com:<用户名>/<仓库名>.git
+git push -u origin main
+```
+
+如果 22 端口也被封，远程地址改成 `ssh://git@ssh.github.com:443/<用户名>/<仓库名>.git`。
+
+### 新建仓库后定时任务不会立刻生效
+
+workflow 刚创建时，GitHub 需要一段时间才注册 cron。此期间 Actions 页面显示「This workflow has no runs yet」，`schedule` 一次都不会触发，**但也不报错**。
+
+判断工作流本身有没有问题，看 `push` 触发的运行——只要它跑绿了，说明配置是好的，剩下的只是等 GitHub 把定时器挂上。
+
 ### ⚠️ 两个必须知道的限制
 
 **1. 免费额度只够公开库**
