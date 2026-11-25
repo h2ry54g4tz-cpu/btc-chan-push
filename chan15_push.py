@@ -56,6 +56,18 @@ def log(msg):
         pass
 
 
+def write_summary(lines):
+    """把摘要写到 GitHub Actions 的运行页面（本地跑时无副作用）。"""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    except OSError:
+        pass
+
+
 def load_config():
     cfg = dict(DEFAULTS)
     # config.json 含密钥、不进仓库；缺失时退回 config.example.json
@@ -344,20 +356,53 @@ def main():
     state = load_state()
     pushed = set(state.get("pushed", []))
     cutoff = datetime.now(BJ) - timedelta(hours=cfg["lookback_hours"])
+    stat = {"已推过": 0, "过期": 0, "类型被过滤": 0, "新增": 0}
 
     fresh = []
     for it in items:
         # 用「时间+价格」做指纹：不受 kind 文案变化影响，也不会漏去重
         sig = "%s|%.2f" % (it["date"], it["price"])
         if sig in pushed:
+            stat["已推过"] += 1
             continue
         if not args.force_all and parse_dt(it["date"]) < cutoff:
             pushed.add(sig)          # 过期信号直接标记，避免以后反复判断
+            stat["过期"] += 1
             continue
         if not any(b in cfg["push_kinds"] for b in it["buckets"]):
             pushed.add(sig)
+            stat["类型被过滤"] += 1
             continue
+        stat["新增"] += 1
         fresh.append((sig, it))
+
+    log("信号统计：识别 %d 个 | 新增 %d | 已推过 %d | 过期 %d | 类型过滤 %d | 基线=%s"
+        % (len(items), stat["新增"], stat["已推过"], stat["过期"],
+           stat["类型被过滤"], state.get("bootstrapped")))
+    if items:
+        log("最新信号时间：%s（当前 %s，窗口 %d 小时）"
+            % (items[-1]["date"], datetime.now(BJ).strftime("%Y-%m-%d %H:%M"),
+               cfg["lookback_hours"]))
+
+    summary = result.get("summary") or {}
+    write_summary([
+        "## BTC 15m 缠论监控",
+        "",
+        "| 项目 | 值 |",
+        "|---|---|",
+        "| 运行时间 | %s |" % datetime.now(BJ).strftime("%Y-%m-%d %H:%M"),
+        "| K线数 | %s |" % summary.get("K线数"),
+        "| 执行笔数 | %s |" % summary.get("有效笔数"),
+        "| 中枢数 | %s |" % summary.get("中枢数"),
+        "| 已确认买卖点总数 | %s |" % summary.get("已确认买卖点"),
+        "| 最新信号时间 | %s |" % (items[-1]["date"] if items else "-"),
+        "| 识别信号 | %d |" % len(items),
+        "| 本轮新增待推 | %d |" % stat["新增"],
+        "| 已推过 | %d |" % stat["已推过"],
+        "| 过期跳过 | %d |" % stat["过期"],
+        "| 类型过滤 | %d |" % stat["类型被过滤"],
+        "| 基线已建立 | %s |" % state.get("bootstrapped"),
+    ])
 
     if not state.get("bootstrapped"):
         state["bootstrapped"] = True

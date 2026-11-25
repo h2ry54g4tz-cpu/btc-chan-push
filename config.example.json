@@ -5,7 +5,11 @@
   "symbol": "BTC",
   "hyperliquid_coin": "BTC",
   "days": 12,
-  "lookback_hours": 8,
+  "lookback_hours": 24,
   "chanlun_dir": "",
-  "push_kinds": ["bottom", "top", "ratio"]
+  "push_kinds": [
+    "bottom",
+    "top",
+    "ratio"
+  ]
 }
